@@ -94,13 +94,19 @@ public class Main {
         String reversedStr = new StringBuilder(decrypt).reverse().toString();
         System.out.println("Message reversed: " +reversedStr);
 
-        //separando em hexa
-        String encryptHexa = toHex(encrypt(algo, reversedStr,password));
 
+        byte[] msgSendByte = encrypt(algo, reversedStr,password);
+        //separando em hexa
+        String encryptHexa = toHex(msgSendByte);
         System.out.println(encryptHexa);
 
 
-        String decrypt2 = decrypt(algo, hexStringToByteArray(encryptHexa), iv1Glob, password);
+        byte[] IV2 = Arrays.copyOfRange(msgSendByte, 0, 16);
+
+
+
+
+        String decrypt2 = decrypt(algo, hexStringToByteArray(encryptHexa), IV2, password);
 
         System.out.println(decrypt2);
 
