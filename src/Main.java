@@ -1,15 +1,16 @@
-import javax.crypto.*;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
 import java.security.*;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Random;
 
 public class Main {
     public static byte[] S;
-    public static byte[] iv1Glob;
 
 
     public static void main(String[] args) throws NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchPaddingException {
@@ -23,7 +24,7 @@ public class Main {
 
     }
 
-    public static void initialPart(String stringB) throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeyException, BadPaddingException, InvalidAlgorithmParameterException, NoSuchPaddingException {
+    public static void initialPart(String stringB) throws NoSuchAlgorithmException {
         String P = "B10B8F96A080E01DDE92DE5EAE5D54EC52C99FBCFB06A3C6";
         P += "9A6A9DCA52D23B616073E28675A23D189838EF1E2EE652C0";
         P += "13ECB4AEA906112324975C3CD49B83BFACCBDD7D90C4BD70";
@@ -41,10 +42,8 @@ public class Main {
         BigInteger BIp = new BigInteger(P,16);
         BigInteger BIg = new BigInteger(G,16);
 
-
         //set a random to "a"
         Random r = new Random();
-
 
         BigInteger a;
         do {
@@ -87,31 +86,32 @@ public class Main {
         byte[] cypherText = Arrays.copyOfRange(msgByte,16,msgByte.length);
         byte[] IV = Arrays.copyOfRange(msgByte, 0, 16);
 
-
-        String decrypt = decrypt(algo, cypherText,IV,password);
+        //decrypting...
+        String decrypt = decrypt(algo, cypherText, IV, password);
         System.out.println("Message Received: " + decrypt);
 
+        //follow the instructions...
         String reversedStr = new StringBuilder(decrypt).reverse().toString();
-        System.out.println("Message reversed: " +reversedStr);
+        System.out.println("Message reversed: " + reversedStr);
 
+        //encrypting
+        byte[] msgSendByte = encrypt(algo, reversedStr, password);
 
-        byte[] msgSendByte = encrypt(algo, reversedStr,password);
-        //separando em hexa
+        //change to hex and send
         String encryptHexa = toHex(msgSendByte);
-        System.out.println(encryptHexa);
+        //String encryptHexa = toHex(Arrays.copyOfRange(msgSendByte,16,msgSendByte.length));
+        System.out.println("Encrypted hexa: " + encryptHexa);
 
 
-        byte[] IV2 = Arrays.copyOfRange(msgSendByte, 0, 16);
+        //decrypting the crypted message, to assure that is correct
+        //byte[] IV2 = Arrays.copyOfRange(msgSendByte, 0, 16);
+        //String decrypt2 = decrypt(algo, hexStringToByteArray(encryptHexa), IV2, password);
 
-
-
-
-        String decrypt2 = decrypt(algo, hexStringToByteArray(encryptHexa), IV2, password);
-
-        System.out.println(decrypt2);
+        //System.out.println("Decrypt sent message : " + decrypt2);
 
 
     }
+
     //https://www.baeldung.com/java-aes-encryption-decryption
     public static String decrypt(String algo, byte[] cipherText, byte[] iv, byte[] password) throws NoSuchPaddingException,
             NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException,
@@ -135,14 +135,20 @@ public class Main {
         //IvParameterSpec IV = new IvParameterSpec(iv);
         byte[] iv1 = new byte[16];
         new SecureRandom().nextBytes(iv1);
-        iv1Glob = iv1;
         IvParameterSpec IV = new IvParameterSpec(iv1);
 
-        SecretKeySpec key = new SecretKeySpec(password,"AES");
+        SecretKeySpec key = new SecretKeySpec(password, "AES");
         Cipher cipher = Cipher.getInstance(algo);
 
         cipher.init(Cipher.ENCRYPT_MODE, key, IV);
-        return cipher.doFinal(cipherText.getBytes());
+
+        byte[] cipherArray = cipher.doFinal(cipherText.getBytes());
+        byte[] result = new byte[16 + cipherArray.length];
+
+        System.arraycopy(iv1, 0, result, 0, 16);
+        System.arraycopy(cipherArray, 0, result, 16, cipherArray.length);
+
+        return result;
     }
 
     //https://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java/140861#140861
@@ -162,7 +168,7 @@ public class Main {
         return String.format("%0" + (bytes.length << 1) + "x", bi);
     }
 
-
+    //https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
     public static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
